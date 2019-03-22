@@ -1,25 +1,25 @@
 package com.jared.lineserver.components;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
-import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.bitbucket.kienerj.io.OptimizedRandomAccessFile;
-import org.springframework.cache.annotation.CacheConfig;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Component;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 
 import static java.lang.Thread.sleep;
 
 //@CacheConfig(cacheNames = {"lines"})
 public class FileInitializer {
+    HashMap<Integer, Long> linesHashmap = new HashMap<Integer, Long>();
     ArrayList<Long> linePointers = new ArrayList<>();
-    String filename = "linesbig.txt";
+    String filename = "linesnumbers.txt";
+    //This can be scaled out since it's only file reading, one should be fine though
     private OptimizedRandomAccessFile raf;
     AsyncCache<Integer, String> cache = null;
+    int steps = 200;
 
     public FileInitializer() {
         loadData();
@@ -28,58 +28,56 @@ public class FileInitializer {
     //@EventListener(ApplicationReadyEvent.class)
     public void loadData() {
         try {
-            /*FileInputStream fis = new FileInputStream(filename);
-            BufferedReader br = new BufferedReader(new InputStreamReader(fis));
-
-            while (br.readLine() != null) {
-                linePointers.add(fis.getChannel().position());
-                //System.out.println(thisLine);
-            }*/
             long startTime = System.currentTimeMillis();
             System.out.println("Starting Read of File " + filename);
             raf = new OptimizedRandomAccessFile(filename, "r");
-            linePointers.add((long) 0);
+            linesHashmap.put(0,(long) 0);
+            int i = 0;
             while (raf.readLine() != null) {
-                linePointers.add(raf.getFilePointer());
+                i++;
+                if (i % steps == 0) {
+                    linesHashmap.put(i,raf.getFilePointer());
+                }
             }
             System.out.println("Completed in " + (System.currentTimeMillis() - startTime) + " Milliseconds");
             //Create cache
             cache = Caffeine.newBuilder()
-                    .maximumSize(linePointers.size() / 10)
+                    .maximumSize(linesHashmap.size() / 10)
                     .buildAsync();
-            //raf.close();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    //@Cacheable("lines")
-    public synchronized String getLine(int lineNum) {
+    public String getLine(int lineNum) {
         try {
             //If not in the set of lines, return null
-            if (lineNum <= linePointers.size()) {
+            if (lineNum <= linesHashmap.size()*steps+steps) {
+                //Use a future to share results if multiple hits
                 CompletableFuture<String> lineFuture = cache.getIfPresent(lineNum);
                 String line;
-                if (lineFuture != null && (line = lineFuture.get())!= null) {
-                    System.out.println("Returning Cached Line");
+                if (lineFuture != null && (line = lineFuture.get()) != null) {
+                    //System.out.println("Returning Cached Line " + lineNum);
                     return line;
                 } else {
-                    CompletableFuture newFuture = CompletableFuture.supplyAsync(()->{
+                    CompletableFuture<String> newFuture = CompletableFuture.supplyAsync(() -> {
                         try {
-                        System.out.println("Sleeping 5s to show cache");
-                            try {
-                                sleep(5000);
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
+                            long startTime = System.currentTimeMillis();
+                            //System.out.println("Getting File Line " + lineNum);
+                            raf.seek(linesHashmap.get(lineNum-(lineNum%steps)));
+                            String textLine = null;
+                            for(int i = 0; i< (lineNum%steps); i++){
+                                raf.readLine();
                             }
-                            raf.seek(linePointers.get(lineNum));
-                            return raf.readLine();
+                            textLine = raf.readLine();
+                            //System.out.println("Retrieved in " + (System.currentTimeMillis() - startTime) + " Milliseconds");
+                            return textLine;
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
                         return null;
                     });
-                    cache.put(lineNum,newFuture);
+                    cache.put(lineNum, newFuture);
                     return cache.getIfPresent(lineNum).get();
                 }
             }

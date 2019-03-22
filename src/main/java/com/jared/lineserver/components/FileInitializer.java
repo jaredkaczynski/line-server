@@ -8,10 +8,16 @@ import java.util.ArrayList;
 public class FileInitializer {
     RandomAccessFile raf = null;
     ArrayList<Long> linePointers = new ArrayList<>();
+
+    public FileInitializer() {
+        loadData();
+    }
+
     //@EventListener(ApplicationReadyEvent.class)
     public void loadData() {
         try {
             raf = new RandomAccessFile("lines.txt", "r");
+            linePointers.add((long) 0);
             while (raf.readLine() != null) {
                 linePointers.add(raf.getFilePointer());
             }

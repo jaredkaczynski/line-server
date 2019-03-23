@@ -11,8 +11,9 @@ import java.util.concurrent.CompletableFuture;
 
 public class FileAccessor {
     //Hashmap storing line number to byte offset
-    private final HashMap<Integer, Long> linesHashmap = new HashMap<Integer, Long>();
+    private final HashMap<Integer, Long> linesHashmap = new HashMap<>();
     //Filename being read
+    @SuppressWarnings("FieldCanBeLocal")
     private final String filename = "linesnumbers.txt";
     //Realistically one is all you can use to read the file due to drive limits, this allows random read and is very fast
     private OptimizedRandomAccessFile raf;

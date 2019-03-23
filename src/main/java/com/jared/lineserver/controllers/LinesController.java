@@ -7,9 +7,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletRequest;
 
-
+@SuppressWarnings("WeakerAccess")
 @Controller
 public class LinesController {
     //Controllers are a singleton and this is the only class using it so keep it simple, init here
@@ -32,14 +31,12 @@ public class LinesController {
 
     /**
      *
-     * @param exception
-     * @param request
      * @return Returns a 413 error response to an exception
      */
     @ExceptionHandler(TypeMismatchException.class)
     public
     @ResponseBody
-    ResponseEntity<?> handleMyException(Exception exception, HttpServletRequest request) {
+    ResponseEntity<?> handleMyException() {
         return new ResponseEntity<>(HttpStatus.valueOf(413));
     }
 

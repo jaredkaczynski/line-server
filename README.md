@@ -8,7 +8,7 @@ On request of a line, the line is checked for range, 0-max lines, and if valid c
 
 **How will your system perform with a 1 GB file? a 10 GB file? a 100 GB file?**
 
-Scaling should be reasonably linear. A 1GB file should take around 6 seconds to process, a 10GB about a minute, and a 100GB about 10 minutes. This isn't currently cached to disk but it could be in the future. I wanted to keep the project in scope and considering performance, it isn't a huge priority. The only adjustment that may be needed is turning the number of lines from an integer to a long. It is integers for now to save space since 2 billion lines is a lot of lines.
+Scaling should be reasonably linear. By not storing every single lines location and instead every 50 I greatly reduce the space required to store the line data with very little performance loss. This step amount can be adjusted up or down depending on file size to optimize memory usage. A 1GB file should take around 6 seconds to process, a 10GB about a minute, and a 100GB about 10 minutes. This isn't currently cached to disk but it could be in the future. I wanted to keep the project in scope and considering performance, it isn't a huge priority. The only adjustment that may be needed is turning the number of lines from an integer to a long. It is integers for now to save space since 2 billion lines is a lot of lines and that many longs would take up a lot more room in memory.
 
 **How will your system perform with 100 users? 10000 users? 1000000 users?**
 
@@ -24,12 +24,14 @@ Stackoverflow heavily. Some of the searches were for issues with setting things 
 
 The overall project uses Spring Web along with Spring test for web services and tests respectively. I have used Spring before and knew how to use it so sticking with it was a good plan. Specifically for file reading I use a library called IO which adds a buffered RandomFileReader which reads as fast as a buffered reader but with the bonus of random access. This is the key to having high performance without a proper database as the default Java implementation is reading by byte. I use Caffeine for caching. Caffeine is a continuation of Guava Cache and I have used it before and enjoy the features such as asynchronous caching. It is very fast and due to having async support, means multiple requests in a short time should use the same file read to get the line. It also has good support for eviction and size limiting.
 
-For the purposes of testing, I added Google Guava for a stopwatch. This was only for testing but I kept it in there since it's easy to remove, doesn't effect performance, and provides performance data.
+For the purposes of performance testing, I added Google Guava for a stopwatch.
 
 **How long did you spend on this exercise? If you had unlimited more time to spend on this, how would you spend it and how would you prioritize each item?**
 
-I spent an evening and a morning with thinking it over in between. If I had unlimited time, I would look into what bottlenecks the file read performance. Most likely it's system level related and can not be heavily improved. I attempted to use two file readers but it didn't seem to improve performance. Optimizing for cache hits may also be a good use of the time, figuring out a good balance between memory usage and hit rate. The biggest priority would be optimizing cache as disk speed itself seems to be the main limitation from reads.
+I spent an evening and a morning with thinking it over in between. If I had unlimited time, I would look into what bottlenecks the file read performance. Most likely it's system level related and can not be heavily improved. I attempted to use two file readers but it didn't seem to improve performance. Optimizing for cache hits may also be a good use of the time, figuring out a good balance between memory usage and hit rate. The biggest priority would be optimizing cache as disk speed itself is the main limitation for getting lines.
 
 **If you were to critique your code, what would you have to say about it?**
 
-Using steps to save on memory space without much performance loss is smart but can be confusing due to the math required. Line retrievals and such all require some possibly confusing math to get the right line in the file. It is a very fast solution considering the possible file sizes and limitation of no proper database or copying of the entirety of the data.
+Using steps for pointers to save on memory space without much performance loss is smart but can be confusing due to the math required. Line retrievals and such all require some possibly confusing math to get the right line in the file. It is a very fast solution considering the possible file sizes and limitation of no proper database or copying of the entirety of the data. Keeping the same file pointer open for the whole lifecycle is very smart from a speed perspective.
+
+I'm assuming that maven is installed for the build/run scripts. It was stated in instructions they can just invoke another tool though so I am hopeful.

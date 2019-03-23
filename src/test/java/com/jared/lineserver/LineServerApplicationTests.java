@@ -28,10 +28,16 @@ public class LineServerApplicationTests {
 	}
 
 	@Test
-	public void outOfRangeTest() throws Exception {
+	public void outOfRangeLowerTest() throws Exception {
 		this.mockMvc.perform(get("/lines/-1")).andExpect(status().is(413))
 				.andExpect(content().string(""));
 	}
+
+    @Test
+    public void outOfRangeUpperTest() throws Exception {
+        this.mockMvc.perform(get("/lines/999999999999")).andExpect(status().is(413))
+                .andExpect(content().string(""));
+    }
 
 	@Test
 	public void inRangeTest0() throws Exception {

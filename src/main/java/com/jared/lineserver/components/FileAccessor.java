@@ -12,11 +12,9 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-public class FileInitializer {
+public class FileAccessor {
     //Hashmap storing line number to byte offset
     HashMap<Integer, Long> linesHashmap = new HashMap<Integer, Long>();
-    //Test Arraylist to see if it would retrieve faster than HashMap with many entries
-    //List<Long> lineOffsets = new ArrayList<>();
     //Filename being read
     String filename = "linesnumbers.txt";
     //Realistically one is all you can use to read the file due to drive limits, this allows random read and is very fast
@@ -28,30 +26,30 @@ public class FileInitializer {
 
     int totalLines;
 
-    /*int sum = 0;
-    int count = 0;*/
-
     /**
      * Initialize the file reader
      */
-    public FileInitializer() {
+    public FileAccessor() {
         addShutdownHook();
         loadData();
     }
 
-    //@EventListener(ApplicationReadyEvent.class)
+    /**
+     * Reads in file and uses an OptimizedRandomAccessFile which buffers the read to get pointers to every {steps} line
+     * Every step is recorded in a hashmap
+     * Once done a caffeine instance is made for caching with 1/10 the total lines as the size, adjust as needed for space/performance
+     */
     public void loadData() {
         try {
             Stopwatch t = Stopwatch.createStarted();
             System.out.println("Starting Read of File " + filename);
+            //Open file in
             raf = new OptimizedRandomAccessFile(filename, "r");
             linesHashmap.put(0, (long) 0);
-            //lineOffsets.add((long) 0);
             int i = 0;
             while (raf.readLine() != null) {
                 i++;
                 if (i % steps == 0) {
-                    //lineOffsets.add(raf.getFilePointer());
                     linesHashmap.put(i, raf.getFilePointer());
                 }
             }
@@ -59,7 +57,7 @@ public class FileInitializer {
             System.out.println("Completed in " + t.toString());
             //Create cache
             cache = Caffeine.newBuilder()
-                    .maximumSize(linesHashmap.size() / 10)
+                    .maximumSize(totalLines / 10)
                     .buildAsync();
         } catch (Exception e) {
             e.printStackTrace();
@@ -80,13 +78,15 @@ public class FileInitializer {
             Stopwatch t = Stopwatch.createStarted();
             //If not in the set of lines, return null
             if (lineNum <= totalLines && lineNum >= 0) {
-                //Use a future to share results if multiple hits
+                //Check if the line exists in cache
                 CompletableFuture<String> lineFuture = cache.getIfPresent(lineNum);
                 String line;
+                //If it exists return the cached value
                 if (lineFuture != null && (line = lineFuture.get()) != null) {
                     System.out.println("Retrieved cached line in " + t.toString());
                     return line;
                 } else {
+                    //Make a future and use it to return the value from disk
                     CompletableFuture<String> newFuture = CompletableFuture.supplyAsync(() -> {
                         try {
                             raf.seek(linesHashmap.get((lineNum - (lineNum % steps))));
@@ -101,7 +101,9 @@ public class FileInitializer {
                         }
                         return null;
                     });
+                    //Add the future to the cache
                     cache.put(lineNum, newFuture);
+                    //This shouldn't be able to be null
                     return cache.getIfPresent(lineNum).get();
                 }
             }

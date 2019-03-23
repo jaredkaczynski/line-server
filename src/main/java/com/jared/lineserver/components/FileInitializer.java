@@ -22,10 +22,9 @@ public class FileInitializer {
     //Realistically one is all you can use to read the file due to drive limits, this allows random read and is very fast
     private OptimizedRandomAccessFile raf;
     AsyncCache<Integer, String> cache = null;
-    //How many steps between each pointer line, 0,200,400
-    //Since the goal was to be efficient in storage while also being fast, this is a good balance since a database is
-    //not allowed and there seems to be a floor of performance of around 100microseconds per line
-    int steps = 100;
+    //How many steps between each pointer
+    //Disk reads are around 4K so 50 will likely be one read
+    int steps = 50;
 
     int totalLines;
 
@@ -80,34 +79,21 @@ public class FileInitializer {
         try {
             Stopwatch t = Stopwatch.createStarted();
             //If not in the set of lines, return null
-            if (lineNum <= totalLines) {
+            if (lineNum <= totalLines && lineNum >= 0) {
                 //Use a future to share results if multiple hits
                 CompletableFuture<String> lineFuture = cache.getIfPresent(lineNum);
                 String line;
                 if (lineFuture != null && (line = lineFuture.get()) != null) {
-                    System.out.println("Returning Cached Line " + lineNum);
+                    System.out.println("Retrieved cached line in " + t.toString());
                     return line;
                 } else {
                     CompletableFuture<String> newFuture = CompletableFuture.supplyAsync(() -> {
                         try {
-                            //System.out.println("Getting File Line " + lineNum);
-                            //Turns out hashmaps and arraylists are basically equal speed even in large size, who knew
-                            /*lineOffsets.get((lineNum - (lineNum % steps))/steps);
-                            System.out.println("Retrieved in " + t.toString());
-                            t.reset();
-                            t.start();
-                            linesHashmap.get((lineNum - (lineNum % steps)));
-                            System.out.println("Retrieved in " + t.toString());
-                            t.reset();
-                            t.start();
-                            count++;*/
                             raf.seek(linesHashmap.get((lineNum - (lineNum % steps))));
-                            String textLine = null;
                             for (int i = 0; i < (lineNum % steps); i++) {
                                 raf.readLine();
                             }
-                            textLine = raf.readLine();
-                            //sum+=t.elapsed(TimeUnit.MICROSECONDS);
+                            String textLine = raf.readLine();
                             System.out.println("Retrieved in " + t.toString());
                             return textLine;
                         } catch (IOException e) {

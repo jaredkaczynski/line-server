@@ -13,7 +13,7 @@ import javax.servlet.http.HttpServletRequest;
 @Controller
 public class LinesController {
     //Controllers are a singleton and this is the only class using it so keep it simple, init here
-    FileAccessor fileAccessor = new FileAccessor();
+    private final FileAccessor fileAccessor = new FileAccessor();
 
     /**
      *

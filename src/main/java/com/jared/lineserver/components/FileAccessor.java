@@ -6,28 +6,25 @@ import com.google.common.base.Stopwatch;
 import org.bitbucket.kienerj.io.OptimizedRandomAccessFile;
 
 import java.io.*;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 public class FileAccessor {
     //Hashmap storing line number to byte offset
-    HashMap<Integer, Long> linesHashmap = new HashMap<Integer, Long>();
+    private final HashMap<Integer, Long> linesHashmap = new HashMap<Integer, Long>();
     //Filename being read
-    String filename = "linesnumbers.txt";
+    private final String filename = "linesnumbers.txt";
     //Realistically one is all you can use to read the file due to drive limits, this allows random read and is very fast
     private OptimizedRandomAccessFile raf;
-    AsyncCache<Integer, String> cache = null;
+    private AsyncCache<Integer, String> cache = null;
     //How many steps between each pointer
     //Disk reads are around 4K so 50 will likely be one read
-    int steps = 50;
-
-    int totalLines;
+    private final int steps = 50;
+    //Keep track of total lines in file
+    private int totalLines;
 
     /**
-     * Initialize the file reader
+     * Initialize the file reader and add shutdown hooks
      */
     public FileAccessor() {
         addShutdownHook();
@@ -39,7 +36,7 @@ public class FileAccessor {
      * Every step is recorded in a hashmap
      * Once done a caffeine instance is made for caching with 1/10 the total lines as the size, adjust as needed for space/performance
      */
-    public void loadData() {
+    private void loadData() {
         try {
             Stopwatch t = Stopwatch.createStarted();
             System.out.println("Starting Read of File " + filename);
@@ -47,8 +44,10 @@ public class FileAccessor {
             raf = new OptimizedRandomAccessFile(filename, "r");
             linesHashmap.put(0, (long) 0);
             int i = 0;
+            //Read all lines of file
             while (raf.readLine() != null) {
                 i++;
+                //If the line is an increment of a step store a byte offset
                 if (i % steps == 0) {
                     linesHashmap.put(i, raf.getFilePointer());
                 }
@@ -89,13 +88,18 @@ public class FileAccessor {
                     //Make a future and use it to return the value from disk
                     CompletableFuture<String> newFuture = CompletableFuture.supplyAsync(() -> {
                         try {
-                            raf.seek(linesHashmap.get((lineNum - (lineNum % steps))));
-                            for (int i = 0; i < (lineNum % steps); i++) {
+                            //Get line offset compared to row in hashmap
+                            int offset = (lineNum % steps);
+                            //I need to get the closest lowest line number so, subtract the modulo of the line number
+                            //and the step count from the requested number to get the hashmap section
+                            //Example, 121-(121%100) = 100
+                            raf.seek(linesHashmap.get(lineNum - offset));
+                            //Skip lines until goal line is next
+                            for (int i = 0; i < offset; i++) {
                                 raf.readLine();
                             }
-                            String textLine = raf.readLine();
-                            System.out.println("Retrieved in " + t.toString());
-                            return textLine;
+                            //System.out.println("Retrieved in " + t.toString());
+                            return raf.readLine();
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -116,7 +120,7 @@ public class FileAccessor {
     /**
      * Close file on shutdown
      */
-    public void addShutdownHook() {
+    private void addShutdownHook() {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("Closing files");
             try {

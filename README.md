@@ -2,9 +2,13 @@
 
 **How does your system work? (if not addressed in comments in source)**
 
+My build script generates a quick test file that has numbers new line separated. This is used to run tests during the build process. The run script just calls the standard mvn run script for Spring.
+
 I read the file in using a random file reader class with a buffer for speed and every 50 lines I put the specific byte offset into a hashmap. I repeat this until the end keeping track of total line count. After being read I take the total line count, divide it by 10, and make that the cache size limit in Caffeine. This can likely be optimized.
 
 On request of a line, the line is checked for range, 0-max lines, and if valid checked in cache. If not found in cache, a future is made that requests the line from disk and this future is send to cache for sharing with other web workers. The future uses the modulo of the requested line from the 50 line step and subtracts to get the nearest pointer to the line. This file pointer is read in and looped over and read until the desired line is found. Then the answer is returned. In the case of a cache it, the future result is returned.
+
+I use 0 based indexing for lines as no specifics were requested and it makes more sense in the software development context.
 
 **How will your system perform with a 1 GB file? a 10 GB file? a 100 GB file?**
 
@@ -34,4 +38,6 @@ I spent an evening and a morning with thinking it over in between. If I had unli
 
 Using steps for pointers to save on memory space without much performance loss is smart but can be confusing due to the math required. Line retrievals and such all require some possibly confusing math to get the right line in the file. It is a very fast solution considering the possible file sizes and limitation of no proper database or copying of the entirety of the data. Keeping the same file pointer open for the whole lifecycle is very smart from a speed perspective.
 
-I'm assuming that maven is installed for the build/run scripts. It was stated in instructions they can just invoke another tool though so I am hopeful.
+I have to make the assumption that maven is installed for the build/run scripts. It was stated in instructions they can just invoke another tool though so I am hopeful.
+
+Tests require a file passed in to run, build.sh does this automatically however. The method of passing the argument in could be possibly be improved to not be a system property.

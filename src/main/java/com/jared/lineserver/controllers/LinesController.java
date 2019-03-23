@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 
 @Controller
 public class LinesController {
+    //Controllers are a singleton and this is the only class using it so keep it simple, init here
     FileInitializer fileInitializer = new FileInitializer();
 
     @RequestMapping(value="/lines/{id}", method=RequestMethod.GET)

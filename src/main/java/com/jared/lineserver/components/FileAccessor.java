@@ -4,6 +4,7 @@ import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.base.Stopwatch;
 import org.bitbucket.kienerj.io.OptimizedRandomAccessFile;
+import org.springframework.context.annotation.Bean;
 
 import java.io.*;
 import java.util.HashMap;
@@ -14,7 +15,6 @@ public class FileAccessor {
     private final HashMap<Integer, Long> linesHashmap = new HashMap<>();
     //Filename being read
     @SuppressWarnings("FieldCanBeLocal")
-    private final String filename = "lines.txt";
     //Realistically one is all you can use to read the file due to drive limits, this allows random read and is very fast
     private OptimizedRandomAccessFile raf;
     private AsyncCache<Integer, String> cache = null;
@@ -39,6 +39,7 @@ public class FileAccessor {
      */
     private void loadData() {
         try {
+            String filename = System.getProperty("filename");
             Stopwatch t = Stopwatch.createStarted();
             System.out.println("Starting Read of File " + filename);
             //Open file in

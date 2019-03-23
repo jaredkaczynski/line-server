@@ -1,1 +1,1 @@
-mvn package
+seq 0 500000 > testlines;mvn package -Dfilename=testlines

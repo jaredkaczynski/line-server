@@ -4,7 +4,6 @@ import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.base.Stopwatch;
 import org.bitbucket.kienerj.io.OptimizedRandomAccessFile;
-import org.springframework.context.annotation.Bean;
 
 import java.io.*;
 import java.util.HashMap;
@@ -76,7 +75,7 @@ public class FileAccessor {
      */
     public String getLine(int lineNum) {
         try {
-            Stopwatch t = Stopwatch.createStarted();
+            //Stopwatch t = Stopwatch.createStarted();
             //If not in the set of lines, return null
             if (lineNum <= totalLines && lineNum >= 0) {
                 //Check if the line exists in cache
@@ -84,7 +83,7 @@ public class FileAccessor {
                 String line;
                 //If it exists return the cached value
                 if (lineFuture != null && (line = lineFuture.get()) != null) {
-                    System.out.println("Retrieved cached line in " + t.toString());
+                    //System.out.println("Retrieved cached line in " + t.toString());
                     return line;
                 } else {
                     //Make a future and use it to return the value from disk

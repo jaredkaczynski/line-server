@@ -32,7 +32,6 @@ public class LineServerApplicationTests {
 		this.mockMvc.perform(get("/lines/-1")).andExpect(status().is(413))
 				.andExpect(content().string(""));
 	}
-
     @Test
     public void outOfRangeUpperTest() throws Exception {
         this.mockMvc.perform(get("/lines/999999999999")).andExpect(status().is(413))
@@ -50,5 +49,24 @@ public class LineServerApplicationTests {
 		this.mockMvc.perform(get("/lines/55555")).andExpect(status().is(200))
 				.andExpect(content().string("55555"));
 	}
+
+    @Test
+    public void inRangeTest50() throws Exception {
+        this.mockMvc.perform(get("/lines/50")).andExpect(status().is(200))
+                .andExpect(content().string("50"));
+    }
+
+    @Test
+    public void inRangeTest49() throws Exception {
+        this.mockMvc.perform(get("/lines/49")).andExpect(status().is(200))
+                .andExpect(content().string("49"));
+    }
+
+    @Test
+    public void inRangeTest51() throws Exception {
+        this.mockMvc.perform(get("/lines/51")).andExpect(status().is(200))
+                .andExpect(content().string("51"));
+    }
+
 
 }

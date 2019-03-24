@@ -16,7 +16,7 @@ Scaling should be reasonably linear. By not storing every single lines location 
 
 **How will your system perform with 100 users? 10000 users? 1000000 users?**
 
-Disk reads will be the limitation and so caching will be key. An SSD can only do a few thousand operations per second. My retrievals from line requested to line retrieved are 20 microseconds when cached and vary from 50 to around 150 depending on line count, size per line, and various system IO oddities. The current implementation should scale easily to a large user count IF provided with sufficient memory for caching and cache size is increased. Without this expect a high hundreds to low thousands of requests per second as a limit if line requests are pure random. This would allow for a reasonable experience with 10000 users and no issues at all with 100.
+Disk reads will be the limitation and so caching will be key. An SSD can only do a few thousand operations per second. My retrievals from line requested to line retrieved are 20 microseconds when cached and vary from 50 to around 150 depending on line count, size per line, and various system IO oddities which may cause outliers with longer retrieval times. The current implementation should scale easily to a large user count IF provided with sufficient memory for caching and cache size is increased. Without this expect a high hundreds to low thousands of requests per second as a limit if line requests are pure random. This would allow for a reasonable experience with 10000 users and no issues at all with 100.  
 
 I used JMeter to try to do some load testing. My results vary but have hit nearly 1000 responses per second at times using a random line value for each request. I did test arraylist versus hashmap for retrieval of lines with no consistently better option so I kept it as hashmap for better logic understanding.
 
@@ -26,9 +26,15 @@ Stackoverflow heavily. Some of the searches were for issues with setting things 
 
 **What third-party libraries or other tools does the system use? How did you choose each library or framework you used?**
 
-The overall project uses Spring Web along with Spring test for web services and tests respectively. I have used Spring before and knew how to use it so sticking with it was a good plan. Specifically for file reading I use a library called IO which adds a buffered RandomFileReader which reads as fast as a buffered reader but with the bonus of random access. This is the key to having high performance without a proper database as the default Java implementation is reading by byte. I use Caffeine for caching. Caffeine is a continuation of Guava Cache and I have used it before and enjoy the features such as asynchronous caching. It is very fast and due to having async support, means multiple requests in a short time should use the same file read to get the line. It also has good support for eviction and size limiting.
+* The base project uses [Spring](https://spring.io/) Web along with Spring test for web services and tests respectively. I have used Spring before and knew how to use it so sticking with it was a good plan. 
 
-For the purposes of performance testing, I added Google Guava for a stopwatch.
+* Specifically for file reading I use a library called [IO](https://mvnrepository.com/artifact/org.bitbucket.kienerj/io) which adds a buffered RandomFileReader which reads as fast as a buffered reader but with the bonus of random access. This is the key to having high performance without a proper database as the default Java implementation is reading by byte. 
+
+* I use [Caffeine](https://mvnrepository.com/artifact/com.github.ben-manes.caffeine/caffeine) for caching. Caffeine is a continuation of Guava Cache and I have used it before and enjoy the features such as asynchronous caching. It is very fast and due to having async support, means multiple requests in a short time should use the same file read to get the line. It also has good support for eviction and size limiting.
+
+* For the purposes of performance testing, I added [Google Guava](https://mvnrepository.com/artifact/com.google.guava/guava) for a stopwatch.
+
+Then it's just the associated dependencies with these libraries
 
 **How long did you spend on this exercise? If you had unlimited more time to spend on this, how would you spend it and how would you prioritize each item?**
 
@@ -36,8 +42,10 @@ I spent an evening and a morning with thinking it over in between. If I had unli
 
 **If you were to critique your code, what would you have to say about it?**
 
-Using steps for pointers to save on memory space without much performance loss is smart but can be confusing due to the math required. Line retrievals and such all require some possibly confusing math to get the right line in the file. It is a very fast solution considering the possible file sizes and limitation of no proper database or copying of the entirety of the data. Keeping the same file pointer open for the whole lifecycle is very smart from a speed perspective.
+Using steps for pointers to save on memory space without much performance loss can be confusing due to the math required. Line retrievals and such all require faith in a 3rd party library to get the right line in the file. It is a very fast solution considering the possible file sizes and limitation of no proper database or copying of the entirety of the data. Keeping the same file pointer open for the whole lifecycle is very smart from a speed perspective.
 
-I have to make the assumption that maven is installed for the build/run scripts. It was stated in instructions they can just invoke another tool though so I am hopeful.
+My experience with code reviews of Java Spring based code is very limited so I may not follow all the style guide perfectly or all Spring conventions.
+
+I have to make the assumption that maven is installed for the build/run scripts. It was stated in instructions they can just invoke another tool though so I am hopeful. There's likely some optimizations to be made involving cache size based on file size 
 
 Tests require a file passed in to run, build.sh does this automatically however. The method of passing the argument in could be possibly be improved to not be a system property.
